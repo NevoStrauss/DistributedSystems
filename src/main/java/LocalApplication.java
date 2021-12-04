@@ -78,7 +78,6 @@ public class LocalApplication {
   }
 
 
-  //todo: needed?
   private static void getSecurityDetails() {
     File file = new File(SECRETS);
     try (BufferedReader bf = new BufferedReader(new FileReader(file))) {

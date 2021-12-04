@@ -10,7 +10,7 @@ public class EC2 {
   private static final String amiId = "ami-0ed9277fb7eb570c9";
   private static final String keyName = "NevoEranKeyPair";
 
-  public static void createWorkernstance(Ec2Client ec2, String name, String userData, int maxCount, String tag) {
+  public static void createWorkerInstance(Ec2Client ec2, String name, String userData, int maxCount, String tag) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
       .imageId(amiId)
       .instanceType(InstanceType.T2_MICRO)

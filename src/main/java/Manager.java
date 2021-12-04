@@ -32,7 +32,7 @@ public class Manager {
 
   private static void createWorkers() {
     for (int i = 0; i < 3; i++) {
-      EC2.createWorkernstance(
+      EC2.createWorkerInstance(
         Ec2Client.builder().region(Region.US_EAST_1).build(),
         "Worker"+i,
         getWorkerUserData(),
