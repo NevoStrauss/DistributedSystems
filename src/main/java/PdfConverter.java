@@ -5,6 +5,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.fit.pdfdom.PDFDomTree;
+
 import javax.xml.parsers.ParserConfigurationException;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -12,25 +13,53 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
+
 public class PdfConverter {
 
-  public PdfConverter() {}
+  private String inputFileName;
+  private String outputFileName;
+  private int numOfPdfPerWorker;
+  private Boolean shouldTerminate;
 
-  public String handleInput(String action, String fileUrl) {
+  public PdfConverter(String[] args) {
+    this.inputFileName = args[0];
+    this.outputFileName = args[1];
+    this.numOfPdfPerWorker = Integer.parseInt(args[2]);
+    this.shouldTerminate = args.length >= 4;
+  }
+
+  public String getInputFileName() {
+    return inputFileName;
+  }
+
+  public String getOutputFileName() {
+    return outputFileName;
+  }
+
+  public int getNumOfPdfPerWorker() {
+    return numOfPdfPerWorker;
+  }
+
+  public static String  handleInput(String line) {
+    String[] splitted = line.split("\t");
+    String action = splitted[0];
+    String fileUrl = splitted[1];
+
+
     try {
-      String path;
+      String path = "work";
       path = DownloadFile(fileUrl);
-      if(!path.equals("work")){
+      if(path != "work"){
         switch (action) {
           case "ToImage":
-            convertToImage(path, "src/output/");
-            break;
+            return convertToImage(path, "src/output/");
+          break;
           case "ToHTML":
-            convertToHTML(path, "src/output/html.html");
-            break;
+            return convertToHTML(path, "src/output/html.html");
+          break;
           case "ToText":
-            convertToText(path, "src/output/pdf_as_text.txt");
-            break;
+            return convertToText(path, "src/output/pdf_as_text.txt");
+          break;
           default:
             //do nothing
             break;
@@ -41,8 +70,6 @@ public class PdfConverter {
     catch (Exception e) {
       e.printStackTrace();
     }
-    //todo: return converted as string
-    return;
   }
 
   private static String DownloadFile(String filePath) throws IOException{
@@ -50,27 +77,30 @@ public class PdfConverter {
     URL url = new URL(filePath);
     InputStream is = url.openStream();
     ReadableByteChannel channel = Channels.newChannel( url.openStream());
-    FileOutputStream fo = new FileOutputStream(ret);
+    FileOutputStream fo = new FileOutputStream( new File(ret));
     fo.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
     fo.close();
     channel.close();
     return ret;
   }
 
-  private static void convertToImage(String inputPath, String outputPath) throws IOException {
+  private static String convertToImage(String inputPath, String outputPath) throws IOException {
     PDDocument document = PDDocument.load(new File(inputPath));
     PDFRenderer pdfRenderer = new PDFRenderer(document);
 
     for (int page = 0; page < 1 /*document.getNumberOfPages() */; ++page) {
       BufferedImage bim = pdfRenderer.renderImageWithDPI(
-        page, 300, ImageType.RGB);
+              page, 300, ImageType.RGB);
+      String ret = String.format("src/output/pdf-%d.%s", page + 1, "jpg");
       ImageIOUtil.writeImage(
-        bim, String.format("src/output/pdf-%d.%s", page + 1, "jpg"), 300);
+              bim, ret, 300);
     }
     document.close();
+    return outputPath;
   }
 
-  private static void convertToText(String inputPath, String outputPath) throws IOException {
+  private static String convertToText(String inputPath, String outputPath) throws IOException {
+    System.out.println(inputPath);
     PDDocument document = PDDocument.load(new File(inputPath));
     AccessPermission ap = document.getCurrentAccessPermission();
     if (!ap.canExtractContent())
@@ -92,9 +122,9 @@ public class PdfConverter {
         System.out.println("File not found");
       }
     }
+    return outputPath;
   }
-
-  private static void convertToHTML(String inputPath, String outputPath) throws IOException, ParserConfigurationException {
+  private static String convertToHTML(String inputPath, String outputPath) throws IOException, ParserConfigurationException {
     PDDocument doc = PDDocument.load(new File(inputPath));
     AccessPermission ap = doc.getCurrentAccessPermission();
     if (!ap.canExtractContent()){throw new IOException("Dont have permissions");}
@@ -108,6 +138,7 @@ public class PdfConverter {
     p.setEndPage(1);
     p.writeText(doc, pw);
     doc.close();
+    return outputPath;
   }
 
 }
