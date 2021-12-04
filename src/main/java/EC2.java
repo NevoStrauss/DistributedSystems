@@ -6,30 +6,26 @@ import software.amazon.awssdk.services.ec2.model.*;
 import java.nio.charset.StandardCharsets;
 
 public class EC2 {
-  private final Ec2Client ec2;
-  private static String amiId;
+  private static final Ec2Client ec2 = Ec2Client.builder().region(Region.US_EAST_1).build();;
+  private static final String amiId = "ami-0ed9277fb7eb570c9";
   private static final String keyName = "NevoEranKeyPair";
 
-  public EC2(String amiId, Region region) {
-    ec2 = Ec2Client.builder().region(region).build();
-    EC2.amiId = amiId;
-  }
-
-  public static void createEC2Instance(Ec2Client ec2, String name, String userData, int maxCount, String tag) {
+  public static void createWorkernstance(Ec2Client ec2, String name, String userData, int maxCount, String tag) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
       .imageId(amiId)
       .instanceType(InstanceType.T2_MICRO)
       .maxCount(maxCount)
       .minCount(1)
       .userData(Base64.encodeAsString(userData.getBytes()))
+      .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
       .build();
 
     RunInstancesResponse response = ec2.runInstances(runRequest);
     String instanceId = response.instances().get(0).instanceId();
 
     Tag tags = Tag.builder()
-      .key(name)
-      .value(tag)
+      .key("worker")
+      .value("worker")
       .build();
 
     CreateTagsRequest tagRequest = CreateTagsRequest.builder()
@@ -50,26 +46,26 @@ public class EC2 {
 
   }
 
-  public void startInstance(String instanceId){
+  public static void startInstance(String instanceId){
     StartInstancesRequest startRequest = StartInstancesRequest.builder()
       .instanceIds(instanceId).build();
     ec2.startInstances(startRequest);
   }
 
-  public void stopInstance(String instanceId){
+  public static void stopInstance(String instanceId){
     StopInstancesRequest request = StopInstancesRequest.builder()
       .instanceIds(instanceId).build();
     ec2.stopInstances(request);
   }
 
-  public void terminateInstance(String instanceId) {
+  public static void terminateInstance(String instanceId) {
     TerminateInstancesRequest request = TerminateInstancesRequest.builder()
       .instanceIds(instanceId).build();
     ec2.terminateInstances(request);
   }
 
 
-  public String getOrCreateManager(String arn){ //TODO: Need to add data parameter
+  public static String getOrCreateManager(String arn){ //TODO: Need to add data parameter
 
     DescribeInstancesRequest request = DescribeInstancesRequest.builder()
       .build();
@@ -80,9 +76,9 @@ public class EC2 {
       DescribeInstancesResponse response = ec2.describeInstances(request);
 
       for(Reservation reservation : response.reservations()) {
-        System.out.println("reservation"+reservation.toString());
+        System.out.println("reservation: "+reservation.toString());
         for(Instance instance : reservation.instances()) {
-          System.out.println("instance" + instance.toString());
+          System.out.println("instance: " + instance.toString());
           for (Tag tag: instance.tags()) {
             System.out.println("tag: "+tag.value());
             if (tag.value().equals("manager")){
@@ -105,7 +101,7 @@ public class EC2 {
     return createManagerInstance(amiId, arn);
   }
 
-  private String createManagerInstance(String amiId, String arn) {
+  private static String createManagerInstance(String amiId, String arn) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
       .instanceType(InstanceType.T2_MICRO)
       .imageId(amiId)
@@ -114,7 +110,7 @@ public class EC2 {
       .minCount(1)
 //                .securityGroups("launch-wizard-5")
       .userData(getManagerScript(arn))
-//                .iamInstanceProfile(IamInstanceProfileSpecification.builder().arn(arn).build())
+      .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
       .build();
 
     RunInstancesResponse response = ec2.runInstances(runRequest);
@@ -145,14 +141,13 @@ public class EC2 {
   }
 
   private static String getManagerScript(String arn) {
-    String script = "#!/bin/bash\n"+
+    String script =
+      "#!/bin/bash\n" +
       "sudo yum install -y java-1.8.0-openjdk\n" +
-      "sudo yum update -y\n" ;
-    script += "sudo mkdir jars\n";
-    script += "cd jars\n";
-    script += "sudo aws s3 cp s3://jarfilesbucket/Manager.jar ./\n";
-    script += "sudo java -Xmx30g -jar ./Manager.jar ami-0ed9277fb7eb570c9 " + keyName + " " +  arn;
-
+      "sudo yum update -y\n" +
+      "mkdir jars\n" +
+      "aws s3 cp s3://jarfilesbucket/Manager.jar ./jars/Manager.jar\n" +
+      "java -jar /jars/Manager.jar\n";
     return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
   }
 

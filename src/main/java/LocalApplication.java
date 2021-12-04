@@ -24,10 +24,7 @@ public class LocalApplication {
   private static String inputFileLocation;
   private static String outputFileLocation;
   private static String managerInstanceId;
-  private static final Region REGION = Region.US_EAST_1;
-  private static final String AMI_ID = "ami-0ed9277fb7eb570c9";
   private static String arn;
-  private static EC2 managerInstance;
 
 
   public static void main(String[] args) {
@@ -48,12 +45,9 @@ public class LocalApplication {
       outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
 
       SQS.createQueue("managerTo"+LOCAL_APP_ID);
-      SQS.sendMessage(inputFileLocation, LOCAL_APP_TO_MANAGER_Q);
+      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation, LOCAL_APP_TO_MANAGER_Q);
 
-      managerInstance = new EC2(AMI_ID, REGION);
-      managerInstanceId = managerInstance.getOrCreateManager(arn);
-
-      SQS.sendMessage(LOCAL_APP_ID, LOCAL_APP_TO_MANAGER_Q);
+      managerInstanceId = EC2.getOrCreateManager(arn);
 
       boolean taskDone = false;
       while (!taskDone){
@@ -73,7 +67,7 @@ public class LocalApplication {
         S3.terminate(INPUT_FILE_NAME,"inputFile");
         S3.terminate(OUTPUT_FILE_NAME, "outputFile");
         SQS.terminate(SQS.getUrl("managerTo"+LOCAL_APP_ID));
-        managerInstance.terminateInstance(managerInstanceId);
+        EC2.terminateInstance(managerInstanceId);
       }
     }
   }

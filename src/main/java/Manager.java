@@ -1,9 +1,13 @@
-import org.apache.log4j.BasicConfigurator;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.model.Message;
-import java.io.*;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 
@@ -12,26 +16,33 @@ public class Manager {
   private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/localAppToManagerQ";
 
   private static boolean shouldTerminateWorkers = false;
-  private static final String workerUserData = "#! /bin/bash\n" +
-    "sudo yum install -y java-1.8.0-openjdk\n" +
-    "sudo yum update -y\n" +
-    "mkdir worker\n" +
-    "aws s3 cp s3:<PATH TO JAR FILE IN S3>" +
-    "java -jar /worker/Worker.jar\n";
+
+  private static String getWorkerUserData(){
+    String script =
+      "#! /bin/bash\n" +
+      "sudo yum install -y java-1.8.0-openjdk\n" +
+      "sudo yum update -y\n" +
+      "mkdir jars\n" +
+      "aws s3 cp s3://jarfilesbucket/Worker.jar ./jars/Worker.jar\n" +
+      "java -jar /jars/Worker.jar\n";
+    return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+  }
+
+
 
   private static void createWorkers() {
-    for (int i = 0; i < 15; i++) {
-      EC2.createEC2Instance(
+    for (int i = 0; i < 3; i++) {
+      EC2.createWorkernstance(
         Ec2Client.builder().region(Region.US_EAST_1).build(),
         "Worker"+i,
-        workerUserData,
+        getWorkerUserData(),
         1,
         "workerTag"+i
       );
     }
   }
 
-  private static void handleMessage(String msg) throws IOException {
+  private static void handleMessage(String msg) {
     String[] messages = msg.split("\t");
     if(messages.length == 0)
       return;
@@ -79,7 +90,6 @@ public class Manager {
   }
 
   public static void main(String[] args) {
-    BasicConfigurator.configure();
     createWorkers();
     while(!shouldTerminateWorkers){
       List<Message> messages = SQS.receiveMessages(localAppToManagerQ);

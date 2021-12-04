@@ -41,10 +41,10 @@ public class Worker {
 
   }
 
-  public static void main() throws Exception {
+  public static void main(String[] args) throws Exception {
     while (!shouldTerminate) {
       List<Message> messages = SQS.receiveMessages(managerToWorkerQ);
-      for (Message message : messages) {
+        for (Message message : messages) {
         handleMessage(message);
       }
       SQS.deleteMessages(messages, managerToWorkerQ);
