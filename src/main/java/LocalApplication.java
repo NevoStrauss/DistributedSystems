@@ -18,7 +18,7 @@ public class LocalApplication {
   private static int NUM_OF_PDF_PER_WORKER;
   private static boolean SHOULD_TERMINATE;
   private static final String LOCAL_APP_TO_MANAGER_Q = "https://sqs.us-east-1.amazonaws.com/925545029787/localAppToManagerQ";
-  private static final String LOCAL_APP_ID = "localApp" + UUID.randomUUID();
+  private static final String LOCAL_APP_ID = "local-app" + UUID.randomUUID();
   private static final String INPUT_BUCKET_NAME = LOCAL_APP_ID + "input";
   private static final String OUTPUT_BUCKET_NAME =  LOCAL_APP_ID + "output";
   private static String inputFileLocation;
@@ -64,6 +64,7 @@ public class LocalApplication {
 
       ResponseInputStream<GetObjectResponse> getOutputFileResponse = S3.getObject(OUTPUT_BUCKET_NAME, "summaryFile");
 
+      System.out.println(getOutputFileResponse.response());
       createSummeryHTML();
     }
 

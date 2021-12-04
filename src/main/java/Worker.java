@@ -1,11 +1,9 @@
 import software.amazon.awssdk.services.sqs.model.Message;
 
-import java.io.File;
 import java.util.List;
 
 public class Worker {
 
-  private static final PdfConverter pdfConverter = new PdfConverter();
   private static boolean shouldTerminate = false;
   private static final String managerToWorkerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/managerToWorkersQ";
   private static final String workerToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/workersToManagerQ";
@@ -27,7 +25,7 @@ public class Worker {
     String localAppId = parsedMsg[2];
 
     try {
-      String converted = pdfConverter.handleInput(operation, pdfUrl);
+      String converted = PdfConverter.handleInput(operation, pdfUrl);
       S3.putObject(converted, pdfUrl,localAppId+"output");
       SQS.sendMessage("done pdf: "+ converted, workerToManagerQ);
       SQS.deleteMessage(msg, managerToWorkerQ);

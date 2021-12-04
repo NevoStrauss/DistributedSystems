@@ -3,10 +3,8 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.model.Message;
-
 import java.io.*;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Objects;
 
 public class Manager {

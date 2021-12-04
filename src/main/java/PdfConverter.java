@@ -16,50 +16,22 @@ import java.nio.channels.ReadableByteChannel;
 
 public class PdfConverter {
 
-  private String inputFileName;
-  private String outputFileName;
-  private int numOfPdfPerWorker;
-  private Boolean shouldTerminate;
-
-  public PdfConverter(String[] args) {
-    this.inputFileName = args[0];
-    this.outputFileName = args[1];
-    this.numOfPdfPerWorker = Integer.parseInt(args[2]);
-    this.shouldTerminate = args.length >= 4;
-  }
-
-  public String getInputFileName() {
-    return inputFileName;
-  }
-
-  public String getOutputFileName() {
-    return outputFileName;
-  }
-
-  public int getNumOfPdfPerWorker() {
-    return numOfPdfPerWorker;
-  }
-
-  public static String  handleInput(String line) {
+  public static String handleInput(String operation, String line) {
     String[] splitted = line.split("\t");
     String action = splitted[0];
     String fileUrl = splitted[1];
 
-
     try {
       String path = "work";
       path = DownloadFile(fileUrl);
-      if(path != "work"){
+      if(!path.equals("work")){
         switch (action) {
           case "ToImage":
             return convertToImage(path, "src/output/");
-          break;
           case "ToHTML":
             return convertToHTML(path, "src/output/html.html");
-          break;
           case "ToText":
             return convertToText(path, "src/output/pdf_as_text.txt");
-          break;
           default:
             //do nothing
             break;
@@ -70,6 +42,7 @@ public class PdfConverter {
     catch (Exception e) {
       e.printStackTrace();
     }
+    return "";
   }
 
   private static String DownloadFile(String filePath) throws IOException{

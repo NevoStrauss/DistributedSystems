@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 public class EC2 {
   private final Ec2Client ec2;
   private static String amiId;
-  private static final String keyName = "managerKey";
+  private static final String keyName = "NevoEranKeyPair";
 
   public EC2(String amiId, Region region) {
     ec2 = Ec2Client.builder().region(region).build();
@@ -70,13 +70,8 @@ public class EC2 {
 
 
   public String getOrCreateManager(String arn){ //TODO: Need to add data parameter
-    Filter filter = Filter.builder()
-      .name("manager")
-      .values("running", "stopped")
-      .build();
 
     DescribeInstancesRequest request = DescribeInstancesRequest.builder()
-      .filters(filter)
       .build();
 
     String nextToken;
@@ -85,13 +80,16 @@ public class EC2 {
       DescribeInstancesResponse response = ec2.describeInstances(request);
 
       for(Reservation reservation : response.reservations()) {
+        System.out.println("reservation"+reservation.toString());
         for(Instance instance : reservation.instances()) {
+          System.out.println("instance" + instance.toString());
           for (Tag tag: instance.tags()) {
+            System.out.println("tag: "+tag.value());
             if (tag.value().equals("manager")){
-              if(instance.state().name().toString().equals("running") || instance.state().name().toString().equals("pending")){
+              if(instance.state().toString().equals("running") || instance.state().toString().equals("pending")){
                 return instance.instanceId();
               }
-              else if(instance.state().name().toString().equals("stopped")){
+              else if(instance.state().toString().equals("stopped")){
                 startInstance(instance.instanceId());
                 return instance.instanceId();
               }
@@ -115,7 +113,7 @@ public class EC2 {
       .maxCount(1)
       .minCount(1)
 //                .securityGroups("launch-wizard-5")
-      .userData(geManagerScript(arn))
+      .userData(getManagerScript(arn))
 //                .iamInstanceProfile(IamInstanceProfileSpecification.builder().arn(arn).build())
       .build();
 
@@ -146,12 +144,14 @@ public class EC2 {
     return instanceId;
   }
 
-  private String geManagerScript(String arn) {
-    String script = "#!/bin/bash\n";
+  private static String getManagerScript(String arn) {
+    String script = "#!/bin/bash\n"+
+      "sudo yum install -y java-1.8.0-openjdk\n" +
+      "sudo yum update -y\n" ;
     script += "sudo mkdir jars\n";
     script += "cd jars\n";
-    script += "sudo aws s3 cp s3://bucketqoghawn0ehuw2njlvyexsmxt5dczxfwc/Manager.jar ./\n";
-    script += "sudo java -Xmx30g -jar ./Manager.jar ami-0878fb723a9a1c5db " + keyName + " " +  arn;
+    script += "sudo aws s3 cp s3://jarfilesbucket/Manager.jar ./\n";
+    script += "sudo java -Xmx30g -jar ./Manager.jar ami-0ed9277fb7eb570c9 " + keyName + " " +  arn;
 
     return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
   }
