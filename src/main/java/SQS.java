@@ -44,6 +44,7 @@ public class SQS {
     return sqs.receiveMessage(receiveRequest).messages();
   }
 
+
   public static void deleteMessages(List<Message> messages, String queueUrl){
     for (Message msg : messages) {
       DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()

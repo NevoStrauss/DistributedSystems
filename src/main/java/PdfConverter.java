@@ -5,7 +5,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.fit.pdfdom.PDFDomTree;
-
 import javax.xml.parsers.ParserConfigurationException;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -13,17 +12,11 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
-
 public class PdfConverter {
 
   public PdfConverter() {}
 
-  public static void handleInput(String line) {
-    String[] splitted = line.split("\t");
-    String action = splitted[0];
-    String fileUrl = splitted[1];
-
-
+  public String handleInput(String action, String fileUrl) {
     try {
       String path = "work";
       path = DownloadFile(fileUrl);
@@ -48,6 +41,8 @@ public class PdfConverter {
     catch (Exception e) {
       e.printStackTrace();
     }
+    //todo: return converted as string
+    return;
   }
 
   private static String DownloadFile(String filePath) throws IOException{

@@ -1,4 +1,3 @@
-import org.apache.log4j.BasicConfigurator;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
@@ -41,16 +40,13 @@ public class S3 {
   }
 
 
-  public ResponseInputStream<GetObjectResponse> getObject() {
-    return s3Client.getObject(GetObjectRequest.builder().bucket(bucketName).key(queueName).build());
+  public static ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
+    return s3Client.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
   }
 
-  public void deleteObject() {
-    s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key("key").build());
-  }
 
-  public void terminate() {
-    s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key("key").build());
+  public static void terminate(String bucketName, String key) {
+    s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
     s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
   }
 
