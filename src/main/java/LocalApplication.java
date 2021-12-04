@@ -62,7 +62,7 @@ public class LocalApplication {
         }
       }
 
-      ResponseInputStream<GetObjectResponse> getOutputFileResponse = S3.getObject(OUTPUT_BUCKET_NAME, "task_completed");
+      ResponseInputStream<GetObjectResponse> getOutputFileResponse = S3.getObject(OUTPUT_BUCKET_NAME, "summaryFile");
 
       createSummeryHTML();
     }

@@ -1,15 +1,18 @@
 import org.apache.log4j.BasicConfigurator;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.model.Message;
-import java.io.IOException;
-import java.io.InputStream;
+
+import java.io.*;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Objects;
 
 public class Manager {
-  private static final String managerToWorkerQueue = "https://sqs.us-east-1.amazonaws.com/925545029787/managerToWorkersQ";
-  private static final String workerToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/workersToManagerQ";
+  private static final String managerToWorkerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/managerToWorkersQ";
+  private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/localAppToManagerQ";
+
   private static boolean shouldTerminateWorkers = false;
   private static final String workerUserData = "#! /bin/bash\n" +
     "sudo yum install -y java-1.8.0-openjdk\n" +
@@ -35,7 +38,7 @@ public class Manager {
     if(messages.length == 0)
       return;
     if(Objects.equals(messages[0], "terminate")){
-      shouldTerminateWorkers = false;
+      shouldTerminateWorkers = true;
       return;
     }
     if(messages.length >= 2){
@@ -47,8 +50,29 @@ public class Manager {
         String[] lines = message.split("\n");
         for(String line : lines){
           String msgToWorker = line + "\t" + localAppId;
-          SQS.sendMessage(msgToWorker, managerToWorkerQueue);
+          SQS.sendMessage(msgToWorker, managerToWorkerQ);
         }
+        while (true){
+          List<Message> tasks = SQS.receiveMessages(managerToWorkerQ);
+          if (tasks.isEmpty()){
+            break;
+          }
+        }
+        SQS.sendMessage("task_completed", "managerTo"+localAppId);
+        List<S3Object> convertedFiles = S3.getAllObjectsFromBucket(localAppId+"output");
+        File summaryFile = new File("summaryFile.txt");
+        if (summaryFile.createNewFile()){
+          FileWriter fw = new FileWriter("summaryFile.txt");
+          BufferedWriter bw = new BufferedWriter(fw);
+          for (S3Object convertedUrl : convertedFiles) {
+            String nextLine = convertedUrl.toString();
+            bw.write(nextLine);
+            bw.newLine();
+          }
+          S3.putObjectAsFile(summaryFile,"summaryFile",localAppId+"output");
+        }
+
+
       } catch (Exception e){
         e.printStackTrace();
       }
@@ -60,18 +84,18 @@ public class Manager {
     BasicConfigurator.configure();
     createWorkers();
     while(!shouldTerminateWorkers){
-      List<Message> messages = SQS.receiveMessages("https://sqs.us-east-1.amazonaws.com/925545029787/localAppToManagerQ");
+      List<Message> messages = SQS.receiveMessages(localAppToManagerQ);
       for(Message msg : messages){
         try {
           handleMessage(msg.body());
-        }catch (Exception e){
+        }
+        catch (Exception e){
           System.out.println("an error occurred handling the file  "+ e.getMessage());
         }
       }
     }
-    // TODO: 04/12/2021 :
-    // 1. create a progress tracker
-    //  2.create output file from all objects
+
+
   }
 
 }

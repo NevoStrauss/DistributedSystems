@@ -10,8 +10,9 @@ public class Worker {
   private static final String managerToWorkerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/managerToWorkersQ";
   private static final String workerToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/workersToManagerQ";
 
-  private static void handleMessage (String msg) throws Exception {
-    String[] parsedMsg = msg.split("\t");
+  private static void handleMessage(Message msg) throws Exception {
+    String msgAsString = msg.body();
+    String[] parsedMsg = msgAsString.split("\t");
     if(parsedMsg.length < 2){
       if(parsedMsg.length > 0 && parsedMsg[0].equals("terminate")){
         shouldTerminate = true;
@@ -24,16 +25,29 @@ public class Worker {
     String operation = parsedMsg[0];
     String pdfUrl = parsedMsg[1];
     String localAppId = parsedMsg[2];
-    String converted = pdfConverter.handleInput(operation, pdfUrl);
-    S3.putObject(converted, pdfUrl,localAppId+"output");
-    SQS.sendMessage("done" +"\t"+ pdfUrl, workerToManagerQ);
+
+    try {
+      String converted = pdfConverter.handleInput(operation, pdfUrl);
+      S3.putObject(converted, pdfUrl,localAppId+"output");
+      SQS.sendMessage("done pdf: "+ converted, workerToManagerQ);
+      SQS.deleteMessage(msg, managerToWorkerQ);
+    }
+    catch (Exception ex) {
+      S3.putObject(pdfUrl+" got error: "+ex.getMessage(),pdfUrl,localAppId+"output");
+    }
+    finally {
+      List<Message> remainedMessages = SQS.receiveMessages(managerToWorkerQ);
+      SQS.deleteMessages(remainedMessages, managerToWorkerQ);
+      SQS.sendMessage("task_completed", workerToManagerQ);
+    }
+
   }
 
   public static void main() throws Exception {
     while (!shouldTerminate) {
       List<Message> messages = SQS.receiveMessages(managerToWorkerQ);
       for (Message message : messages) {
-        handleMessage(message.toString());
+        handleMessage(message);
       }
       SQS.deleteMessages(messages, managerToWorkerQ);
     }

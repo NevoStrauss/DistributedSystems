@@ -12,8 +12,6 @@ public class S3 {
     .region(Region.US_EAST_1)
     .build();
 
-  CreateBucketResponse response;
-
   public static String getBucketLocation(CreateBucketResponse bucketResponse) {
     return bucketResponse.location();
   }
@@ -39,9 +37,26 @@ public class S3 {
       RequestBody.fromFile(new File(filePath)));
   }
 
+  public static void putObjectAsFile(File file, String bucketKey, String bucketName) {
+    s3Client.putObject(
+      PutObjectRequest.builder()
+        .bucket(bucketName)
+        .key(bucketKey)
+        .build(),
+      RequestBody.fromFile(file));
+  }
 
   public static ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
     return s3Client.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
+  }
+
+  public static List<S3Object> getAllObjectsFromBucket(String bucketName){
+    ListObjectsRequest listObjects = ListObjectsRequest
+      .builder()
+      .bucket(bucketName)
+      .build();
+
+    return s3Client.listObjects(listObjects).contents();
   }
 
 

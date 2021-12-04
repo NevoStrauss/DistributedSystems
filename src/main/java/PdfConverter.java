@@ -18,7 +18,7 @@ public class PdfConverter {
 
   public String handleInput(String action, String fileUrl) {
     try {
-      String path = "work";
+      String path;
       path = DownloadFile(fileUrl);
       if(!path.equals("work")){
         switch (action) {
@@ -50,7 +50,7 @@ public class PdfConverter {
     URL url = new URL(filePath);
     InputStream is = url.openStream();
     ReadableByteChannel channel = Channels.newChannel( url.openStream());
-    FileOutputStream fo = new FileOutputStream( new File(ret));
+    FileOutputStream fo = new FileOutputStream(ret);
     fo.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
     fo.close();
     channel.close();
@@ -71,7 +71,6 @@ public class PdfConverter {
   }
 
   private static void convertToText(String inputPath, String outputPath) throws IOException {
-    System.out.println(inputPath);
     PDDocument document = PDDocument.load(new File(inputPath));
     AccessPermission ap = document.getCurrentAccessPermission();
     if (!ap.canExtractContent())
