@@ -5,33 +5,30 @@ import java.util.List;
 public class Worker {
 
   private static boolean shouldTerminate = false;
-  private static final String managerToWorkerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/managerToWorkersQ";
-  private static final String workerToManagerQ = "https://sqs.us-east-1.amazonaws.com/925545029787/workersToManagerQ";
+  private static final String managerToWorkerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/managerToWorkersQ";
+  private static final String workerToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/workersToManagerQ";
+  private static final String bucketName = "localappoutput";
+  private static final String bucketKey = "outputFile";
+
 
   private static void handleMessage(Message msg) throws Exception {
     String msgAsString = msg.body();
     String[] parsedMsg = msgAsString.split("\t");
-    if(parsedMsg.length < 2){
-      if(parsedMsg.length > 0 && parsedMsg[0].equals("terminate")){
+//    if(parsedMsg.length == 1){
+    if(msgAsString.equals("terminate")){
         shouldTerminate = true;
         return;
-      }
-      SQS.sendMessage("bad line exception",managerToWorkerQ);
-      throw new Exception("not enough arguments in message");
     }
 
-    String operation = parsedMsg[0];
-    String pdfUrl = parsedMsg[1];
-    String localAppId = parsedMsg[2];
-
     try {
-      String converted = PdfConverter.handleInput(operation, pdfUrl);
-      S3.putObject(converted, pdfUrl,localAppId+"output");
-      SQS.sendMessage("done pdf: "+ converted, workerToManagerQ);
+      String converted = PdfConverter.handleInput(msgAsString);
+      S3.putObject(converted, bucketKey, bucketName); //,localAppId+"output");
+//      SQS.sendMessage(converted, workerToManagerQ);
       SQS.deleteMessage(msg, managerToWorkerQ);
     }
     catch (Exception ex) {
-      S3.putObject(pdfUrl+" got error: "+ex.getMessage(),pdfUrl,localAppId+"output");
+//      S3.putObject(pdfUrl+" got error: "+ex.getMessage(),pdfUrl,localAppId+"output");
+      S3.putObject(msgAsString.split("\t")[0] + "Error !!",bucketKey , bucketName); //localAppId+"output");
     }
     finally {
       List<Message> remainedMessages = SQS.receiveMessages(managerToWorkerQ);

@@ -15,10 +15,13 @@ public class LocalApplication {
   private static String OUTPUT_FILE_NAME;
   private static int NUM_OF_PDF_PER_WORKER;
   private static boolean SHOULD_TERMINATE;
-  private static final String LOCAL_APP_TO_MANAGER_Q = "https://sqs.us-east-1.amazonaws.com/925545029787/localAppToManagerQ";
-  private static final String LOCAL_APP_ID = "local-app" + UUID.randomUUID();
-  private static final String INPUT_BUCKET_NAME = LOCAL_APP_ID + "input";
-  private static final String OUTPUT_BUCKET_NAME =  LOCAL_APP_ID + "output";
+  private static final String LOCAL_APP_TO_MANAGER_Q = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManagerQ";
+//  private static final String LOCAL_APP_ID = "local-app" + UUID.randomUUID();
+//  private static final String INPUT_BUCKET_NAME = LOCAL_APP_ID + "input";
+//  private static final String OUTPUT_BUCKET_NAME =  LOCAL_APP_ID + "output";
+  private static final String INPUT_BUCKET_NAME = "localappinput";
+  private static final String OUTPUT_BUCKET_NAME =  "localappoutput";
+  private static final String MANAGER_TO_LOCAL_APP_Q =  "https://sqs.us-east-1.amazonaws.com/497378375097/managerToLocalAppQ";
   private static String inputFileLocation;
   private static String outputFileLocation;
   private static String managerInstanceId;
@@ -42,19 +45,22 @@ public class LocalApplication {
       CreateBucketResponse createOutputBucketResponse = S3.createBucket(OUTPUT_BUCKET_NAME);
       outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
 
-      SQS.createQueue("managerTo"+LOCAL_APP_ID);
-      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation, LOCAL_APP_TO_MANAGER_Q);
+//      SQS.createQueue("managerTo"+LOCAL_APP_ID);
+//      int numOfworkers = inputFile./sNU
+//      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation+"\t"+NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
+      SQS.sendMessage(INPUT_BUCKET_NAME+"\t"+"inputFile" + "\t" +NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
 
       managerInstanceId = EC2.getOrCreateManager(arn);
 
       boolean taskDone = false;
       while (!taskDone){
-        for (Message msg: SQS.receiveMessages("managerTo"+LOCAL_APP_ID)) {
+        for (Message msg: SQS.receiveMessages(MANAGER_TO_LOCAL_APP_Q)) {
           taskDone = (msg.body().equals("task_completed"));
         }
       }
 
       ResponseInputStream<GetObjectResponse> getOutputFileResponse = S3.getObject(OUTPUT_BUCKET_NAME, "summaryFile");
+      SQS.sendMessage("terminate", LOCAL_APP_TO_MANAGER_Q);
 
       System.out.println(getOutputFileResponse.response());
       createSummeryHTML();
@@ -64,7 +70,7 @@ public class LocalApplication {
       if (SHOULD_TERMINATE){
         S3.terminate(INPUT_FILE_NAME,"inputFile");
         S3.terminate(OUTPUT_FILE_NAME, "outputFile");
-        SQS.terminate(SQS.getUrl("managerTo"+LOCAL_APP_ID));
+        SQS.terminate(SQS.getUrl("managerTo")); //+LOCAL_APP_ID));
         EC2.terminateInstance(managerInstanceId);
       }
     }

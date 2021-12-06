@@ -16,7 +16,7 @@ import java.nio.channels.ReadableByteChannel;
 
 public class PdfConverter {
 
-  public static String handleInput(String operation, String line) {
+  public static String handleInput(String line) {
     String[] splitted = line.split("\t");
     String action = splitted[0];
     String fileUrl = splitted[1];
