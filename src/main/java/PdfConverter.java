@@ -1,3 +1,4 @@
+
 import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.tools.imageio.ImageIOUtil;
@@ -5,7 +6,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.fit.pdfdom.PDFDomTree;
-
 import javax.xml.parsers.ParserConfigurationException;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -24,7 +24,7 @@ public class PdfConverter {
     try {
       String path = "work";
       path = DownloadFile(fileUrl);
-      if(!path.equals("work")){
+      if (!path.equals("work")) {
         switch (action) {
           case "ToImage":
             return convertToImage(path, "src/output/");
@@ -38,19 +38,18 @@ public class PdfConverter {
         }
       }
 
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       e.printStackTrace();
     }
     return "";
   }
 
-  private static String DownloadFile(String filePath) throws IOException{
+  private static String DownloadFile(String filePath) throws IOException {
     String ret = "src/output/pdf.pdf";
     URL url = new URL(filePath);
     InputStream is = url.openStream();
-    ReadableByteChannel channel = Channels.newChannel( url.openStream());
-    FileOutputStream fo = new FileOutputStream( new File(ret));
+    ReadableByteChannel channel = Channels.newChannel(url.openStream());
+    FileOutputStream fo = new FileOutputStream(new File(ret));
     fo.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
     fo.close();
     channel.close();
@@ -63,10 +62,10 @@ public class PdfConverter {
 
     for (int page = 0; page < 1 /*document.getNumberOfPages() */; ++page) {
       BufferedImage bim = pdfRenderer.renderImageWithDPI(
-              page, 300, ImageType.RGB);
+        page, 300, ImageType.RGB);
       String ret = String.format("src/output/pdf-%d.%s", page + 1, "jpg");
       ImageIOUtil.writeImage(
-              bim, ret, 300);
+        bim, ret, 300);
     }
     document.close();
     return outputPath;
@@ -97,10 +96,13 @@ public class PdfConverter {
     }
     return outputPath;
   }
+
   private static String convertToHTML(String inputPath, String outputPath) throws IOException, ParserConfigurationException {
     PDDocument doc = PDDocument.load(new File(inputPath));
     AccessPermission ap = doc.getCurrentAccessPermission();
-    if (!ap.canExtractContent()){throw new IOException("Dont have permissions");}
+    if (!ap.canExtractContent()) {
+      throw new IOException("Dont have permissions");
+    }
     PDFTextStripper stripper = new PDFTextStripper();
     stripper.setSortByPosition(true);
     stripper.setStartPage(1);

@@ -8,15 +8,19 @@ import java.io.File;
 import java.util.List;
 
 public class S3 {
-  private static final S3Client s3Client = S3Client.builder()
-    .region(Region.US_EAST_1)
-    .build();
+  private final S3Client s3Client;
+
+  public S3(){
+    s3Client = S3Client.builder()
+      .region(Region.US_EAST_1)
+      .build();
+  }
 
   public static String getBucketLocation(CreateBucketResponse bucketResponse) {
     return bucketResponse.location();
   }
 
-  public static CreateBucketResponse createBucket(String bucketName) {
+  public  CreateBucketResponse createBucket(String bucketName) {
     return s3Client.createBucket(
       CreateBucketRequest
       .builder()
@@ -28,7 +32,7 @@ public class S3 {
   }
 
 
-  public static void putObject(String filePath, String bucketKey, String bucketName) {
+  public  void putObject(String filePath, String bucketKey, String bucketName) {
     s3Client.putObject(
       PutObjectRequest.builder()
         .bucket(bucketName)
@@ -37,7 +41,7 @@ public class S3 {
       RequestBody.fromFile(new File(filePath)));
   }
 
-  public static void putObjectAsFile(File file, String bucketKey, String bucketName) {
+  public  void putObjectAsFile(File file, String bucketKey, String bucketName) {
     s3Client.putObject(
       PutObjectRequest.builder()
         .bucket(bucketName)
@@ -46,11 +50,11 @@ public class S3 {
       RequestBody.fromFile(file));
   }
 
-  public static ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
+  public ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
     return s3Client.getObject(GetObjectRequest.builder().bucket(bucketName).key(key).build());
   }
 
-  public static List<S3Object> getAllObjectsFromBucket(String bucketName){
+  public  List<S3Object> getAllObjectsFromBucket(String bucketName){
     ListObjectsRequest listObjects = ListObjectsRequest
       .builder()
       .bucket(bucketName)
@@ -60,12 +64,12 @@ public class S3 {
   }
 
 
-  public static void terminate(String bucketName, String key) {
+  public  void terminate(String bucketName, String key) {
     s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(key).build());
     s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
   }
 
-  public static void uploadJars(String inputFileName, String bucketName){
+  public  void uploadJars(String inputFileName, String bucketName){
     try {
       ListObjectsRequest listObjects = ListObjectsRequest
         .builder()

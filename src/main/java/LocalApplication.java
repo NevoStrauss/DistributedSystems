@@ -1,13 +1,9 @@
 import org.apache.log4j.BasicConfigurator;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.sqs.model.Message;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.UUID;
+
+import java.awt.*;
+import java.io.*;
 
 public class LocalApplication {
   private static final String SECRETS = "NevoEranKeyPair.pem";
@@ -15,20 +11,19 @@ public class LocalApplication {
   private static String OUTPUT_FILE_NAME;
   private static int NUM_OF_PDF_PER_WORKER;
   private static boolean SHOULD_TERMINATE;
-  private static final String LOCAL_APP_TO_MANAGER_Q = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManagerQ";
-//  private static final String LOCAL_APP_ID = "local-app" + UUID.randomUUID();
-//  private static final String INPUT_BUCKET_NAME = LOCAL_APP_ID + "input";
-//  private static final String OUTPUT_BUCKET_NAME =  LOCAL_APP_ID + "output";
+  private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManagerQ";
+  private static final String managerToLocalAppQ = "https://sqs.us-east-1.amazonaws.com/497378375097/managerToLoacalAppQ";
   private static final String INPUT_BUCKET_NAME = "localappinput";
-  private static final String OUTPUT_BUCKET_NAME =  "localappoutput";
-  private static final String MANAGER_TO_LOCAL_APP_Q =  "https://sqs.us-east-1.amazonaws.com/497378375097/managerToLocalAppQ";
+  private static final String OUTPUT_BUCKET_NAME = "localappoutput";
   private static String inputFileLocation;
   private static String outputFileLocation;
   private static String managerInstanceId;
   private static String arn;
+  private static final EC2 ec2 = new EC2();
+  private static final SQS sqs = new SQS();
+  private static final S3 s3 = new S3();
 
-
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     validateArgs(args);
     INPUT_FILE_NAME = args[0];
     OUTPUT_FILE_NAME = args[1];
@@ -38,40 +33,37 @@ public class LocalApplication {
     getSecurityDetails();
 
     try {
-      CreateBucketResponse createInoutBucketResponse = S3.createBucket(INPUT_BUCKET_NAME);
+      CreateBucketResponse createInoutBucketResponse = s3.createBucket(INPUT_BUCKET_NAME);
       inputFileLocation = S3.getBucketLocation(createInoutBucketResponse);
-      S3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
+      s3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
 
-      CreateBucketResponse createOutputBucketResponse = S3.createBucket(OUTPUT_BUCKET_NAME);
+      CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
       outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
 
 //      SQS.createQueue("managerTo"+LOCAL_APP_ID);
 //      int numOfworkers = inputFile./sNU
 //      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation+"\t"+NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
-      SQS.sendMessage(INPUT_BUCKET_NAME+"\t"+"inputFile" + "\t" +NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
+      sqs.sendMessage(INPUT_BUCKET_NAME + "\t" + "inputFile" + "\t" + NUM_OF_PDF_PER_WORKER, localAppToManagerQ);
 
-      managerInstanceId = EC2.getOrCreateManager(arn);
+      managerInstanceId = ec2.getOrCreateManager(arn);
 
       boolean taskDone = false;
-      while (!taskDone){
-        for (Message msg: SQS.receiveMessages(MANAGER_TO_LOCAL_APP_Q)) {
+      while (!taskDone) {
+        for (Message msg : sqs.receiveMessages(managerToLocalAppQ)) {
           taskDone = (msg.body().equals("task_completed"));
         }
       }
 
-      ResponseInputStream<GetObjectResponse> getOutputFileResponse = S3.getObject(OUTPUT_BUCKET_NAME, "summaryFile");
-      SQS.sendMessage("terminate", LOCAL_APP_TO_MANAGER_Q);
+      InputStream summaryFile = s3.getObject(OUTPUT_BUCKET_NAME, "summaryFile");
+      sqs.sendMessage("terminate", localAppToManagerQ);
+      createHtmlSummery(summaryFile);
 
-      System.out.println(getOutputFileResponse.response());
-      createSummeryHTML();
-    }
-
-    finally {
-      if (SHOULD_TERMINATE){
-        S3.terminate(INPUT_FILE_NAME,"inputFile");
-        S3.terminate(OUTPUT_FILE_NAME, "outputFile");
-        SQS.terminate(SQS.getUrl("managerTo")); //+LOCAL_APP_ID));
-        EC2.terminateInstance(managerInstanceId);
+    } finally {
+      if (SHOULD_TERMINATE) {
+        s3.terminate(INPUT_FILE_NAME, "inputFile");
+        s3.terminate(OUTPUT_FILE_NAME, "outputFile");
+        sqs.terminate(sqs.getUrl("managerTo")); //+LOCAL_APP_ID));
+        ec2.terminateInstance(managerInstanceId);
       }
     }
   }
@@ -92,8 +84,30 @@ public class LocalApplication {
     }
   }
 
-  private static void createSummeryHTML(){
-    System.out.println("hey");
+
+  private static void createHtmlSummery(InputStream summaryFile) throws IOException {
+    File htmlSummary = new File("htmlSummary.html");
+    BufferedWriter bw = new BufferedWriter(new FileWriter(htmlSummary));
+    String htmlPrefix =
+      "<!DOCTYPE html>\n" +
+        "<html>\n" +
+        "<body>";
+    bw.write(htmlPrefix);
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(summaryFile))) {
+      while (reader.ready()) {
+        String line = reader.readLine();
+        bw.write(line);
+        bw.newLine();
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    String htmlPostFix =
+      "</body>\n" +
+        "</html>";
+    bw.write(htmlPostFix);
+    bw.close();
+    Desktop.getDesktop().browse(htmlSummary.toURI());
   }
 }
 
