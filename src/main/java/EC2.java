@@ -16,16 +16,19 @@ public class EC2 {
     keyName = "NevoEranKeyPair";
   }
 
-  public void createWorkerInstance(String userData, int maxCount) {
+
+  public void createWorkerInstance(int maxCount) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
-      .instanceType(InstanceType.T2_MICRO)
-      .imageId(amiId)
-//      .keyName(keyName)
-      .maxCount(maxCount)
-      .minCount(1)
-      .userData(Base64.encodeAsString(userData.getBytes()))
-//      .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
-      .build();
+            .instanceType(InstanceType.T2_MICRO)
+            .imageId(amiId)
+            .keyName(keyName)
+            .maxCount(maxCount)
+            .minCount(1)
+            .userData(getWorkerScript())
+            .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
+            .build();
+
+
 
     RunInstancesResponse response = ec2.runInstances(runRequest);
     String instanceId = response.instances().get(0).instanceId();
@@ -104,14 +107,16 @@ public class EC2 {
     return createManagerInstance(amiId, arn);
   }
 
-  private String createManagerInstance(String amiId, String arn) {
+
+
+    private String createManagerInstance(String amiId, String arn) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
       .instanceType(InstanceType.T2_MICRO)
       .imageId(amiId)
       .keyName(keyName)
       .maxCount(1)
       .minCount(1)
-      .userData(getManagerScript(arn))
+      .userData(getManagerScript())
       .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
       .build();
 
@@ -142,7 +147,7 @@ public class EC2 {
     return instanceId;
   }
 
-  private String getManagerScript(String arn) {
+  private String getManagerScript() {
     String script =
       "#!/bin/bash\n" +
         "sudo yum install -y java-1.8.0-openjdk\n" +
@@ -150,6 +155,17 @@ public class EC2 {
         "mkdir jars\n" +
         "aws s3 cp s3://jarfilesbucket/Manager.jar ./jars/Manager.jar\n" +
         "java -jar /jars/Manager.jar\n";
+    return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+  }
+
+  private static String getWorkerScript() {
+    String script =
+            "#!/bin/bash\n" +
+            "sudo yum install -y java-1.8.0-openjdk\n" +
+            "sudo yum update -y\n" +
+            "mkdir jars\n" +
+            "aws s3 cp s3://jarfilesbucket/Worker.jar ./jars/Worker.jar\n" +
+            "java -jar /jars/Worker.jar\n";
     return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
   }
 

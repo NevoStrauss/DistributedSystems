@@ -1,119 +1,104 @@
-
-import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.pdfbox.tools.imageio.ImageIOUtil;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.fit.pdfdom.PDFDomTree;
-import javax.xml.parsers.ParserConfigurationException;
+import org.apache.pdfbox.text.PDFTextStripper;
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 
-
-public class PdfConverter {
+class PdfConverter {
 
   public static String handleInput(String line) {
-    String[] splitted = line.split("\t");
-    String action = splitted[0];
-    String fileUrl = splitted[1];
-
     try {
-      String path;
-      path = DownloadFile(fileUrl);
-      if (!path.equals("work")) {
-        switch (action) {
-          case "ToImage":
-            return convertToImage(path, "src/output/");
-          case "ToHTML":
-            return convertToHTML(path, "src/output/html.html");
-          case "ToText":
-            return convertToText(path, "src/output/pdf_as_text.txt");
-          default:
-            //do nothing
-            break;
-        }
+      String[] splitted = line.split("\t");
+      String command = splitted[0];
+      String pdfUrl = splitted[1];
+      String path = DownloadFile(pdfUrl);
+      switch (command) {
+        case "ToImage":
+          return convertToImage(path);
+        case "ToHTML":
+          return convertToHTML(path);
+        case "ToText":
+          return convertToText(path);
+        default:
+          //do nothing
+          break;
       }
 
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       e.printStackTrace();
     }
-    return "";
+    return "bad url";
   }
 
-  private static String DownloadFile(String filePath) throws IOException {
-    String ret = "src/output/pdf.pdf";
+  private static String DownloadFile(String filePath) throws IOException{
+    System.setProperty("http.agent", "Chrome");
+
+    String pdfPath = "src/downloads/download.pdf";
     URL url = new URL(filePath);
-    InputStream is = url.openStream();
-    ReadableByteChannel channel = Channels.newChannel(url.openStream());
-    FileOutputStream fo = new FileOutputStream(new File(ret));
-    fo.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
-    fo.close();
-    channel.close();
-    return ret;
+    HttpURLConnection http = (HttpURLConnection)url.openConnection();
+    BufferedInputStream in = new BufferedInputStream(http.getInputStream());
+    FileOutputStream fos = new FileOutputStream(pdfPath);
+    BufferedOutputStream bout = new BufferedOutputStream(fos);
+    byte[] buffer = new byte[1024];
+    int read = 0;
+    while ((read = in.read(buffer, 0, 1024)) >= 0){
+      bout.write(buffer, 0, read);
+    }
+    bout.close();
+    in.close();
+    System.out.println("Download pdf complete");
+    return pdfPath;
   }
 
-  private static String convertToImage(String inputPath, String outputPath) throws IOException {
-    PDDocument document = PDDocument.load(new File(inputPath));
-    PDFRenderer pdfRenderer = new PDFRenderer(document);
 
-    for (int page = 0; page < 1 /*document.getNumberOfPages() */; ++page) {
-      BufferedImage bim = pdfRenderer.renderImageWithDPI(
-        page, 300, ImageType.RGB);
-      String ret = String.format("src/output/pdf-%d.%s", page + 1, "jpg");
-      ImageIOUtil.writeImage(
-        bim, ret, 300);
+
+
+  private static String convertToImage(String inputPath) throws IOException {
+    File file = new File(inputPath);
+    PDDocument document = PDDocument.load(file);
+    PDFRenderer renderer = new PDFRenderer(document);
+    BufferedImage image = renderer.renderImage(0);
+    String path = "src/output/image.png";
+    ImageIO.write(image, "png", new File("src/output/image.png"));
+    document.close();
+    return path;
+  }
+
+  private static String convertToText(String inputPath) throws IOException {
+    File file = new File(inputPath);
+    PDDocument document = PDDocument.load(file);
+    PDFTextStripper pdfStripper = new PDFTextStripper();
+    pdfStripper.setStartPage(1);
+    pdfStripper.setEndPage(1);
+    String path = "src/output/text.txt";
+    String text = pdfStripper.getText(document);
+    try (PrintWriter fileDest = new PrintWriter(path)) {
+      fileDest.println(text);
     }
     document.close();
-    return outputPath;
+    return path;
   }
 
-  private static String convertToText(String inputPath, String outputPath) throws IOException {
-    System.out.println(inputPath);
-    PDDocument document = PDDocument.load(new File(inputPath));
-    AccessPermission ap = document.getCurrentAccessPermission();
-    if (!ap.canExtractContent())
-      throw new IOException("Dont have permissions");
-
-    PDFTextStripper stripper = new PDFTextStripper();
-    stripper.setSortByPosition(true);
-
-    for (int p = 1; p < 2 /*document.getNumberOfPages()*/; ++p) {
-      stripper.setStartPage(p);
-      stripper.setEndPage(p);
-      String text = stripper.getText(document);
-
-      try {
-        PrintWriter pw = new PrintWriter(outputPath);
-        pw.print(text);
-        pw.close();
-      } catch (FileNotFoundException e) {
-        System.out.println("File not found");
-      }
+  private static String convertToHTML(String inputPath) throws IOException {
+    File file = new File(inputPath);
+    PDDocument document = PDDocument.load(file);
+    PDFTextStripper pdfStripper = new PDFTextStripper();
+    pdfStripper.setStartPage(1);
+    pdfStripper.setEndPage(1);
+    String path = "src/output/htmlAsText.txt";
+    String text = pdfStripper.getText(document);
+    try (PrintWriter fileDest = new PrintWriter(path)) {
+      fileDest.println("<div>");
+      fileDest.println(text);
+      fileDest.println("</div>");
     }
-    return outputPath;
-  }
-
-  private static String convertToHTML(String inputPath, String outputPath) throws IOException, ParserConfigurationException {
-    PDDocument doc = PDDocument.load(new File(inputPath));
-    AccessPermission ap = doc.getCurrentAccessPermission();
-    if (!ap.canExtractContent()) {
-      throw new IOException("Dont have permissions");
-    }
-    PDFTextStripper stripper = new PDFTextStripper();
-    stripper.setSortByPosition(true);
-    stripper.setStartPage(1);
-    stripper.setEndPage(1);
-    String text = stripper.getText(doc);
-    PrintWriter pw = new PrintWriter(outputPath);
-    PDFDomTree p = new PDFDomTree();
-    p.setEndPage(1);
-    p.writeText(doc, pw);
-    doc.close();
-    return outputPath;
+    document.close();
+    return path;
   }
 
 }
+

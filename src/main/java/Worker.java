@@ -13,7 +13,8 @@ public class Worker {
   private static final S3 s3 = new S3();
 
 
-  private static void handleMessage(Message msg) throws Exception {
+
+  private static void handleMessage(Message msg) {
     String msgAsString = msg.body();
     if(msgAsString.equals("terminate")){
         shouldTerminate = true;
@@ -23,23 +24,20 @@ public class Worker {
     try {
       String converted = PdfConverter.handleInput(msgAsString);
       s3.putObject(converted, bucketKey, bucketName);
-      sqs.deleteMessage(msg, managerToWorkersQ);
     }
     catch (Exception ex) {
-      s3.putObject(msgAsString.split("\t")[0] + "Error !!",bucketKey , bucketName);
+//      s3.putObject(msgAsString.split("\t")[1],bucketKey , bucketName);
     }
     finally {
-      List<Message> remainedMessages = sqs.receiveMessages(managerToWorkersQ);
-      sqs.deleteMessages(remainedMessages, managerToWorkersQ);
-      sqs.sendMessage("task_completed", workersToManagerQ);
+      sqs.sendMessage(msg.body().split("\t")[2], workersToManagerQ);
     }
 
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     while (!shouldTerminate) {
       List<Message> messages = sqs.receiveMessages(managerToWorkersQ);
-        for (Message message : messages) {
+      for (Message message : messages) {
         handleMessage(message);
       }
       sqs.deleteMessages(messages, managerToWorkersQ);

@@ -11,7 +11,7 @@ public class LocalApplication {
   private static String OUTPUT_FILE_NAME;
   private static int NUM_OF_PDF_PER_WORKER;
   private static boolean SHOULD_TERMINATE;
-  private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManagerQ";
+  private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManager";
   private static final String managerToLocalAppQ = "https://sqs.us-east-1.amazonaws.com/497378375097/managerToLoacalAppQ";
   private static final String INPUT_BUCKET_NAME = "localappinput";
   private static final String OUTPUT_BUCKET_NAME = "localappoutput";
