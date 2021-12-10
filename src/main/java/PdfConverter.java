@@ -22,7 +22,7 @@ public class PdfConverter {
     String fileUrl = splitted[1];
 
     try {
-      String path = "work";
+      String path;
       path = DownloadFile(fileUrl);
       if (!path.equals("work")) {
         switch (action) {

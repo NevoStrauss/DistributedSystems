@@ -8,9 +8,10 @@ import java.util.List;
 public class SQS {
   private final SqsClient sqs;
 
-  public SQS(){
+  public SQS() {
     sqs = SqsClient.builder().region(Region.US_EAST_1).build();
   }
+
   public void createQueue(String queueName) {
     try {
       CreateQueueRequest request = CreateQueueRequest.builder()
@@ -40,7 +41,7 @@ public class SQS {
   }
 
 
-  public  List<Message> receiveMessages(String queueUrl) {
+  public List<Message> receiveMessages(String queueUrl) {
     ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
       .queueUrl(queueUrl)
       .maxNumberOfMessages(1)
@@ -49,7 +50,7 @@ public class SQS {
   }
 
 
-  public  void deleteMessages(List<Message> messages, String queueUrl){
+  public void deleteMessages(List<Message> messages, String queueUrl) {
     for (Message msg : messages) {
       DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
         .queueUrl(queueUrl)
@@ -59,16 +60,16 @@ public class SQS {
     }
   }
 
-  public  void deleteMessage(Message msg, String queueUrl){
-      DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
-        .queueUrl(queueUrl)
-        .receiptHandle(msg.receiptHandle())
-        .build();
-      sqs.deleteMessage(deleteMessageRequest);
-    }
+  public void deleteMessage(Message msg, String queueUrl) {
+    DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
+      .queueUrl(queueUrl)
+      .receiptHandle(msg.receiptHandle())
+      .build();
+    sqs.deleteMessage(deleteMessageRequest);
+  }
 
 
-  public  void terminate(String queueUrl) {
+  public void terminate(String queueUrl) {
     List<Message> messages = receiveMessages(queueUrl);
     for (Message m : messages) {
       sqs.deleteMessage(DeleteMessageRequest.builder().queueUrl(queueUrl).receiptHandle(m.receiptHandle()).build());
@@ -76,7 +77,7 @@ public class SQS {
     }
   }
 
-  public  void deleteQueue(String queueUrl){
+  public void deleteQueue(String queueUrl) {
     DeleteQueueRequest deleteQueueRequest = DeleteQueueRequest.builder()
       .queueUrl(queueUrl)
       .build();

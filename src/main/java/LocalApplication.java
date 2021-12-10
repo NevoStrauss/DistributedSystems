@@ -39,13 +39,13 @@ public class LocalApplication {
 
       CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
       outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
+      managerInstanceId = ec2.getOrCreateManager(arn);
 
 //      SQS.createQueue("managerTo"+LOCAL_APP_ID);
 //      int numOfworkers = inputFile./sNU
 //      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation+"\t"+NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
       sqs.sendMessage(INPUT_BUCKET_NAME + "\t" + "inputFile" + "\t" + NUM_OF_PDF_PER_WORKER, localAppToManagerQ);
 
-      managerInstanceId = ec2.getOrCreateManager(arn);
 
       boolean taskDone = false;
       while (!taskDone) {
@@ -60,9 +60,9 @@ public class LocalApplication {
 
     } finally {
       if (SHOULD_TERMINATE) {
-        s3.terminate(INPUT_FILE_NAME, "inputFile");
-        s3.terminate(OUTPUT_FILE_NAME, "outputFile");
-        sqs.terminate(sqs.getUrl("managerTo")); //+LOCAL_APP_ID));
+        s3.terminate(INPUT_BUCKET_NAME, "inputFile");
+        s3.terminate(OUTPUT_BUCKET_NAME, "summaryFile");
+        sqs.terminate(sqs.getUrl(localAppToManagerQ));
         ec2.terminateInstance(managerInstanceId);
       }
     }

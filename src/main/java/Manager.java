@@ -1,3 +1,4 @@
+import org.apache.log4j.BasicConfigurator;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sqs.model.Message;
 import java.io.*;
@@ -15,7 +16,7 @@ public class Manager {
 
   private static String getWorkerUserData() {
     String script =
-      "#! /bin/bash\n" +
+      "#!/bin/bash\n" +
         "sudo yum install -y java-1.8.0-openjdk\n" +
         "sudo yum update -y\n" +
         "mkdir jars\n" +
@@ -25,8 +26,8 @@ public class Manager {
   }
 
 
-  private static void createWorkers() {
-    for (int i = 0; i < 2; i++) {
+  private static void createWorkers(int numOfWorkers) {
+    for (int i = 0; i < numOfWorkers; i++) {
       ec2.createWorkerInstance(
         getWorkerUserData(),
         1
@@ -35,35 +36,15 @@ public class Manager {
   }
 
   private static void handleMessage(InputStream inputFile) {
-//    String[] messages = msg.split("\t");
-//    System.out.println("!!!!!msg.length:" + msg.length());
-//    if (messages.length == 0)
-//      return;
-//    if (Objects.equals(messages[0], "terminate")) {
-//      shouldTerminateWorkers = true;
-//      return;
-//    }
-//    if (messages.length == 3) {       //LOCAL_APP_ID    inputFileLocation   NUM_OF_PDF_PER_WORKER
-//      String bucketName = messages[0];
-//      String bucketKey = messages[1];
-//      String numOfPdfPerWorker = messages[2];
-//
-//      System.out.println("bucketame:" + bucketName);
-//      System.out.println("bucketKey:" + bucketKey);
-////      int numOfPdfPerWorker = Integer.parseInt(messages[2]);
-//
-//      InputStream inputFile = s3.getObject(bucketName, bucketKey);
       try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputFile))) {
         while (reader.ready()) {
           String line = reader.readLine();
           s3.createBucket(line);
           sqs.sendMessage(line, managerToWorkersQ);
-//          sqs.sendMessage(line + "\t" + bucketName, managerToWorkersQ);
         }
       } catch (IOException e) {
         e.printStackTrace();
       }
-
       while (true) {
         List<Message> tasks = sqs.receiveMessages(managerToWorkersQ);
         if (tasks.isEmpty()) {
@@ -93,19 +74,20 @@ public class Manager {
       }
     }
 
-  public static void main(String[] args) {
-    createWorkers();
+  public static void main(String[] args) throws IOException {
+    BasicConfigurator.configure();
     List<Message> messages;
     do {
       messages = sqs.receiveMessages(localAppToManagerQ);
     } while (messages.isEmpty());
     String initMessage = messages.get(0).body();
-    s3.createBucket(initMessage);
     String[] splitted = initMessage.split("\t");
     String inputBucketName = splitted[0];
     String inputFileKey = splitted[1];
     String numOfPdfPerWorker = splitted[2];
     InputStream inputFile = s3.getObject(inputBucketName, inputFileKey);
+    int numOfWorkers = inputFile.available()/ Integer.parseInt(numOfPdfPerWorker);
+    createWorkers(numOfWorkers);
 
     while (!shouldTerminateWorkers) {
       handleMessage(inputFile);

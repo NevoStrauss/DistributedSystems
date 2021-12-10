@@ -15,8 +15,6 @@ public class Worker {
 
   private static void handleMessage(Message msg) throws Exception {
     String msgAsString = msg.body();
-    String[] parsedMsg = msgAsString.split("\t");
-//    if(parsedMsg.length == 1){
     if(msgAsString.equals("terminate")){
         shouldTerminate = true;
         return;
@@ -24,13 +22,11 @@ public class Worker {
 
     try {
       String converted = PdfConverter.handleInput(msgAsString);
-      s3.putObject(converted, bucketKey, bucketName); //,localAppId+"output");
-//      SQS.sendMessage(converted, workerToManagerQ);
+      s3.putObject(converted, bucketKey, bucketName);
       sqs.deleteMessage(msg, managerToWorkersQ);
     }
     catch (Exception ex) {
-//      S3.putObject(pdfUrl+" got error: "+ex.getMessage(),pdfUrl,localAppId+"output");
-      s3.putObject(msgAsString.split("\t")[0] + "Error !!",bucketKey , bucketName); //localAppId+"output");
+      s3.putObject(msgAsString.split("\t")[0] + "Error !!",bucketKey , bucketName);
     }
     finally {
       List<Message> remainedMessages = sqs.receiveMessages(managerToWorkersQ);

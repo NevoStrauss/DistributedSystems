@@ -72,7 +72,7 @@ public class EC2 {
   }
 
 
-  public String getOrCreateManager(String arn) { //TODO: Need to add data parameter
+  public String getOrCreateManager(String arn) {
 
     DescribeInstancesRequest request = DescribeInstancesRequest.builder()
       .build();
@@ -83,11 +83,8 @@ public class EC2 {
       DescribeInstancesResponse response = ec2.describeInstances(request);
 
       for (Reservation reservation : response.reservations()) {
-        System.out.println("reservation: " + reservation.toString());
         for (Instance instance : reservation.instances()) {
-          System.out.println("instance: " + instance.toString());
           for (Tag tag : instance.tags()) {
-            System.out.println("tag: " + tag.value());
             if (tag.value().equals("manager")) {
               if (instance.state().toString().equals("running") || instance.state().toString().equals("pending")) {
                 return instance.instanceId();
