@@ -38,7 +38,6 @@ public class Manager {
   }
 
   private static void handleMessage(InputStream is) {
-    System.out.println("ERAN TEST - handleMessage");
     final char[] buffer = new char[8192];
     final StringBuilder result = new StringBuilder();
 
@@ -84,21 +83,23 @@ public class Manager {
       }
     }
 
+    sqs.sendMessage("terminate", managerToWorkersQ);      //terminate workers
+
 
 
     try {
-      List<S3Object> convertedFiles = s3.getAllObjectsFromBucket("localappoutput");
-      File summaryFile = new File("summaryFile.txt");
-      if (summaryFile.createNewFile()) {
-        FileWriter fw = new FileWriter("summaryFile.txt");
-        BufferedWriter bw = new BufferedWriter(fw);
-        for (S3Object convertedUrl : convertedFiles) {
-          String nextLine = convertedUrl.toString();
-          bw.write(String.format("<a href = \"%s\"></a>", nextLine));
-          bw.newLine();
-        }
-        s3.putObjectAsFile(summaryFile, "summaryFile", "localApp1Output");
-      }
+//      List<S3Object> convertedFiles = s3.getAllObjectsFromBucket("localappoutput");
+//      File summaryFile = new File("summaryFile.txt");
+//      if (summaryFile.createNewFile()) {
+//        FileWriter fw = new FileWriter("summaryFile.txt");
+//        BufferedWriter bw = new BufferedWriter(fw);
+//        for (S3Object convertedUrl : convertedFiles) {
+//          String nextLine = convertedUrl.toString();
+//          bw.write(String.format("<a href = \"%s\"></a>", nextLine));
+//          bw.newLine();
+//        }
+//        s3.putObjectAsFile(summaryFile, "summaryFile", "localApp1Output");
+//      }
 
     } catch (Exception e) {
         e.printStackTrace();
@@ -106,7 +107,6 @@ public class Manager {
         sqs.sendMessage("task_completed", managerToLocalAppQ);
         shouldTerminateWorkers = true;
       }
-//    sqs.sendMessage("task_completed", managerToLocalAppQ);      //todo - delete
     }
 
   public static void main(String[] args) throws IOException {
@@ -127,9 +127,9 @@ public class Manager {
     handleMessage(inputFile);
 
 
-    while (!shouldTerminateWorkers) {
-      handleMessage(inputFile);
-    }
+//    while (!shouldTerminateWorkers) {
+//      handleMessage(inputFile);
+//    }
   }
 
 }

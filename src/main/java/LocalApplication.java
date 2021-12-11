@@ -33,12 +33,12 @@ public class LocalApplication {
     getSecurityDetails();
 
     try {
-      CreateBucketResponse createInoutBucketResponse = s3.createBucket(INPUT_BUCKET_NAME);
-      inputFileLocation = S3.getBucketLocation(createInoutBucketResponse);
-      s3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
+//      CreateBucketResponse createInoutBucketResponse = s3.createBucket(INPUT_BUCKET_NAME);
+//      inputFileLocation = S3.getBucketLocation(createInoutBucketResponse);
+//      s3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
 
-      CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
-      outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
+//      CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
+//      outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
       managerInstanceId = ec2.getOrCreateManager(arn);
 
 //      SQS.createQueue("managerTo"+LOCAL_APP_ID);

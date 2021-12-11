@@ -9,6 +9,8 @@ public class Worker {
   private static final String workersToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/workersToManagerQ";
   private static final String bucketName = "localappoutput";
   private static final String bucketKey = "summaryFile";
+  private static final String tmpQ = "https://sqs.us-east-1.amazonaws.com/497378375097/tmpQ";
+
   private static final SQS sqs = new SQS();
   private static final S3 s3 = new S3();
 
@@ -22,10 +24,12 @@ public class Worker {
     }
 
     try {
-      String converted = PdfConverter.handleInput(msgAsString);
-      s3.putObject(converted, bucketKey, bucketName);
+      String pathToConvertedFile = PdfConverter.handleInput(msgAsString);
+      sqs.sendMessage("pathToConvertedFile : " + pathToConvertedFile, tmpQ);
+      s3.putObject(pathToConvertedFile, bucketKey, bucketName);
     }
     catch (Exception ex) {
+      ex.printStackTrace();
 //      s3.putObject(msgAsString.split("\t")[1],bucketKey , bucketName);
     }
     finally {
