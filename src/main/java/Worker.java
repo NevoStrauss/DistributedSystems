@@ -1,20 +1,17 @@
 import software.amazon.awssdk.services.sqs.model.Message;
 
+import java.io.File;
 import java.util.List;
+import java.util.UUID;
 
 public class Worker {
 
   private static boolean shouldTerminate = false;
   private static final String managerToWorkersQ = "https://sqs.us-east-1.amazonaws.com/497378375097/managerToWorkersQ";
   private static final String workersToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/workersToManagerQ";
-  private static final String bucketName = "localappoutput";
-  private static final String bucketKey = "summaryFile";
-  private static final String tmpQ = "https://sqs.us-east-1.amazonaws.com/497378375097/tmpQ";
-
+  private static final String outputBucket = "localappoutput";
   private static final SQS sqs = new SQS();
   private static final S3 s3 = new S3();
-
-
 
   private static void handleMessage(Message msg) {
     String msgAsString = msg.body();
@@ -25,22 +22,20 @@ public class Worker {
 
     try {
       String pathToConvertedFile = PdfConverter.handleInput(msgAsString);
-      sqs.sendMessage("pathToConvertedFile : " + pathToConvertedFile, tmpQ);
-      s3.putObject(pathToConvertedFile, bucketKey, bucketName);
+      String msgId = msg.body().split("\t")[2];
+      s3.putObject(pathToConvertedFile, UUID.randomUUID().toString(),outputBucket);
+      sqs.sendMessage( msgId +"\t" + pathToConvertedFile, workersToManagerQ);
     }
     catch (Exception ex) {
-      ex.printStackTrace();
-//      s3.putObject(msgAsString.split("\t")[1],bucketKey , bucketName);
+      String pdfUrl = msg.body().split("\t")[1];
+      String msgId = msg.body().split("\t")[2];
+      sqs.sendMessage(msgId+"\t"+ pdfUrl+"\t"+ex.getMessage(), workersToManagerQ);
     }
-    finally {
-      sqs.sendMessage(msg.body().split("\t")[2], workersToManagerQ);
-    }
-
   }
 
   public static void main(String[] args) {
     while (!shouldTerminate) {
-      List<Message> messages = sqs.receiveMessages(managerToWorkersQ);
+      List<Message> messages = sqs.receiveMessages(managerToWorkersQ,1);
       for (Message message : messages) {
         handleMessage(message);
       }

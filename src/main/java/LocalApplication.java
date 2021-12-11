@@ -33,23 +33,19 @@ public class LocalApplication {
     getSecurityDetails();
 
     try {
-//      CreateBucketResponse createInoutBucketResponse = s3.createBucket(INPUT_BUCKET_NAME);
-//      inputFileLocation = S3.getBucketLocation(createInoutBucketResponse);
-//      s3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
+      CreateBucketResponse createInoutBucketResponse = s3.createBucket(INPUT_BUCKET_NAME);
+      inputFileLocation = S3.getBucketLocation(createInoutBucketResponse);
+      s3.putObject(INPUT_FILE_NAME, "inputFile", INPUT_BUCKET_NAME);
 
-//      CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
-//      outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
+      CreateBucketResponse createOutputBucketResponse = s3.createBucket(OUTPUT_BUCKET_NAME);
+      outputFileLocation = S3.getBucketLocation(createOutputBucketResponse);
       managerInstanceId = ec2.getOrCreateManager(arn);
 
-//      SQS.createQueue("managerTo"+LOCAL_APP_ID);
-//      int numOfworkers = inputFile./sNU
-//      SQS.sendMessage(LOCAL_APP_ID+"\t"+inputFileLocation+"\t"+NUM_OF_PDF_PER_WORKER, LOCAL_APP_TO_MANAGER_Q);
       sqs.sendMessage(INPUT_BUCKET_NAME + "\t" + "inputFile" + "\t" + NUM_OF_PDF_PER_WORKER, localAppToManagerQ);
-
 
       boolean taskDone = false;
       while (!taskDone) {
-        for (Message msg : sqs.receiveMessages(managerToLocalAppQ)) {
+        for (Message msg : sqs.receiveMessages(managerToLocalAppQ,1)) {
           taskDone = (msg.body().equals("task_completed"));
         }
       }
@@ -59,12 +55,12 @@ public class LocalApplication {
       createHtmlSummery(summaryFile);
 
     } finally {
-      if (SHOULD_TERMINATE) {
-        s3.terminate(INPUT_BUCKET_NAME, "inputFile");
-        s3.terminate(OUTPUT_BUCKET_NAME, "summaryFile");
-        sqs.terminate(sqs.getUrl(localAppToManagerQ));
-        ec2.terminateInstance(managerInstanceId);
-      }
+//      if (SHOULD_TERMINATE) {
+//        s3.terminate(INPUT_BUCKET_NAME, "inputFile");
+//        s3.terminate(OUTPUT_BUCKET_NAME, "summaryFile");
+//        sqs.terminate(sqs.getUrl(localAppToManagerQ));
+//        ec2.terminateInstance(managerInstanceId);
+//      }
     }
   }
 

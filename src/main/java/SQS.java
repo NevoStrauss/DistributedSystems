@@ -41,10 +41,10 @@ public class SQS {
   }
 
 
-  public List<Message> receiveMessages(String queueUrl) {
+  public List<Message> receiveMessages(String queueUrl, int maxMsgCount) {
     ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
       .queueUrl(queueUrl)
-      .maxNumberOfMessages(1)
+      .maxNumberOfMessages(maxMsgCount)
       .build();
     return sqs.receiveMessage(receiveRequest).messages();
   }
@@ -70,7 +70,7 @@ public class SQS {
 
 
   public void terminate(String queueUrl) {
-    List<Message> messages = receiveMessages(queueUrl);
+    List<Message> messages = receiveMessages(queueUrl,1);
     for (Message m : messages) {
       sqs.deleteMessage(DeleteMessageRequest.builder().queueUrl(queueUrl).receiptHandle(m.receiptHandle()).build());
       sqs.deleteQueue(DeleteQueueRequest.builder().queueUrl(queueUrl).build());

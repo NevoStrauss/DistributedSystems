@@ -19,15 +19,14 @@ public class EC2 {
 
   public void createWorkerInstance(int maxCount) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
-            .instanceType(InstanceType.T2_MICRO)
-            .imageId(amiId)
-            .keyName(keyName)
-            .maxCount(maxCount)
-            .minCount(1)
-            .userData(getWorkerScript())
-            .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
-            .build();
-
+      .instanceType(InstanceType.T2_MICRO)
+      .imageId(amiId)
+      .keyName(keyName)
+      .maxCount(maxCount)
+      .minCount(1)
+      .userData(getWorkerScript())
+      .iamInstanceProfile(IamInstanceProfileSpecification.builder().name("LabInstanceProfile").build())
+      .build();
 
 
     RunInstancesResponse response = ec2.runInstances(runRequest);
@@ -108,8 +107,7 @@ public class EC2 {
   }
 
 
-
-    private String createManagerInstance(String amiId, String arn) {
+  private String createManagerInstance(String amiId, String arn) {
     RunInstancesRequest runRequest = RunInstancesRequest.builder()
       .instanceType(InstanceType.T2_MICRO)
       .imageId(amiId)
@@ -160,31 +158,13 @@ public class EC2 {
 
   private static String getWorkerScript() {
     String script =
-            "#!/bin/bash\n" +
-            "sudo yum install -y java-1.8.0-openjdk\n" +
-            "sudo yum update -y\n" +
-            "mkdir jars\n" +
-            "mkdir output\n" +
-            "mkdir downloads\n" +
-            "cd ./output\n" +
-            "mkdir image\n" +
-            "mkdir text\n" +
-            "mkdir htmlAsText\n" +
-            "cd ..\n" +
-            "aws s3 cp s3://jarfilesbucket/Worker.jar ./jars/Worker.jar\n" +
-            "java -jar /jars/Worker.jar\n";
+      "#!/bin/bash\n" +
+        "sudo yum install -y java-1.8.0-openjdk\n" +
+        "sudo yum update -y\n" +
+        "mkdir jars\n" +
+        "aws s3 cp s3://jarfilesbucket/Worker.jar ./jars/Worker.jar\n" +
+        "java -jar /jars/Worker.jar\n";
     return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
   }
-
-//  private static String getWorkerScript() {
-//    String script =
-//            "#!/bin/bash\n" +
-//                    "sudo yum install -y java-1.8.0-openjdk\n" +
-//                    "sudo yum update -y\n" +
-//                    "mkdir jars\n" +
-//                    "aws s3 cp s3://jarfilesbucket/Worker.jar ./jars/Worker.jar\n" +
-//                    "java -jar /jars/Worker.jar\n";
-//    return new String(java.util.Base64.getEncoder().encode(script.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-//  }
 
 }
