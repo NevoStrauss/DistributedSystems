@@ -4,6 +4,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 
 import java.awt.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class LocalApplication {
   private static final String SECRETS = "NevoEranKeyPair.pem";
@@ -45,7 +46,7 @@ public class LocalApplication {
 
       boolean taskDone = false;
       while (!taskDone) {
-        for (Message msg : sqs.receiveMessages(managerToLocalAppQ,1)) {
+        for (Message msg : sqs.receiveMessages(managerToLocalAppQ, 1)) {
           taskDone = (msg.body().equals("task_completed"));
         }
       }
@@ -55,12 +56,10 @@ public class LocalApplication {
       createHtmlSummery(summaryFile);
 
     } finally {
-//      if (SHOULD_TERMINATE) {
-//        s3.terminate(INPUT_BUCKET_NAME, "inputFile");
-//        s3.terminate(OUTPUT_BUCKET_NAME, "summaryFile");
-//        sqs.terminate(sqs.getUrl(localAppToManagerQ));
-//        ec2.terminateInstance(managerInstanceId);
-//      }
+      if (SHOULD_TERMINATE) {
+        s3.terminate(INPUT_BUCKET_NAME, "inputFile");
+        ec2.terminateInstance(managerInstanceId);
+      }
     }
   }
 
@@ -80,6 +79,20 @@ public class LocalApplication {
     }
   }
 
+  private static String inputStreamToString(InputStream inputStream) throws IOException {
+    final char[] buffer = new char[8192];
+    final StringBuilder result = new StringBuilder();
+    try (Reader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
+      int charsRead;
+      while ((charsRead = reader.read(buffer, 0, buffer.length)) > 0) {
+        result.append(buffer, 0, charsRead);
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      return "couldn't build html summary";
+    }
+    return result.toString();
+  }
 
   private static void createHtmlSummery(InputStream summaryFile) throws IOException {
     File htmlSummary = new File("htmlSummary.html");
@@ -89,9 +102,9 @@ public class LocalApplication {
         "<html>\n" +
         "<body>";
     bw.write(htmlPrefix);
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(summaryFile))) {
-      while (reader.ready()) {
-        String line = reader.readLine();
+    try {
+      String[] lines = inputStreamToString(summaryFile).split("\n");
+      for (String line : lines) {
         bw.write(line);
         bw.newLine();
       }

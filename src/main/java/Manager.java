@@ -13,7 +13,6 @@ public class Manager {
   private static final String localAppToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/localAppToManager";
   private static final String managerToLocalAppQ = "https://sqs.us-east-1.amazonaws.com/497378375097/managerToLoacalAppQ";
   private static final String workersToManagerQ = "https://sqs.us-east-1.amazonaws.com/497378375097/workersToManagerQ";
-  private static final String outputBucket = "localappoutput";
   private static boolean shouldTerminateWorkers = false;
   private static final EC2 ec2 = new EC2();
   private static final SQS sqs = new SQS();
@@ -29,6 +28,7 @@ public class Manager {
   }
 
   private static void handleLocalAppMessage(InputStream is) throws IOException {
+    sqs.sendMessage("3", managerToLocalAppQ);
     final char[] buffer = new char[8192];
     final StringBuilder result = new StringBuilder();
 
@@ -38,12 +38,14 @@ public class Manager {
         result.append(buffer, 0, charsRead);
       }
     } catch (IOException e) {
+      sqs.sendMessage("4", managerToLocalAppQ);
       e.printStackTrace();
     }
 
     String fileAsString = result.toString();
     String[] lines = fileAsString.split("\n");
     HashMap<String, Boolean> tasksDoneMap = new HashMap<>();
+    sqs.sendMessage("5", managerToLocalAppQ);
     for (String line : lines) {
       String id = UUID.randomUUID().toString();
       tasksDoneMap.put(id, false);
@@ -60,24 +62,23 @@ public class Manager {
   }
 
   private static void checkAllTasksDone(HashMap<String, Boolean> tasksDoneMap, HashSet badUrls, HashSet goodUrls) {
+    sqs.sendMessage("check", managerToLocalAppQ);
     boolean done = false;
     while (!done) {
-      List<Message> tasks = sqs.receiveMessages(workersToManagerQ, 1000);
+      List<Message> tasks = sqs.receiveMessages(workersToManagerQ, 10);
       for (Message task : tasks) {
         if (task.body().equals("stop")) {
           return;
         }
         String[] maybeBadFile = task.body().split("\t");
+        String msgId = maybeBadFile[0];
+        tasksDoneMap.put(msgId, true);
         if (maybeBadFile.length > 2) {
-          String msgId = maybeBadFile[0];
           String badUrl = maybeBadFile[1];
-          tasksDoneMap.put(msgId, true);
           badUrls.add(badUrl);
         } else {
-          String msgId = maybeBadFile[0];
-          String goodUrl = maybeBadFile[1];
-          goodUrls.add(goodUrl);
-          tasksDoneMap.put(msgId, true);
+          String url = "https://localappoutput.s3.amazonaws.com/"+ msgId;
+          goodUrls.add(url);
         }
       }
       sqs.deleteMessages(tasks, workersToManagerQ);
@@ -85,22 +86,25 @@ public class Manager {
     }
   }
 
-  private static void buildSummaryFile(HashSet<String> badUrls, HashSet<String> goodUrls) throws IOException {
-    File summaryFile = new File("summaryFile.txt");
-    FileWriter fw = new FileWriter("summaryFile.txt");
-    if (summaryFile.createNewFile()) {
-      BufferedWriter bw = new BufferedWriter(fw);
-      for (String badUrl : badUrls) {
-        bw.write(String.format("<p>%s- bad url!</p>", badUrl));
-        bw.newLine();
+  private static void buildSummaryFile(HashSet<String> badUrls, HashSet<String> goodUrls) {
+    while (true) {
+      try {
+        PrintWriter summaryFile = new PrintWriter("\\summaryFile.txt", "UTF-8");
+        for (String goodUrl : goodUrls) {
+          summaryFile.println(String.format("<a href = \"%s\">%s</a>", goodUrl,goodUrl));
+        }
+        for (String badUrl : badUrls) {
+          summaryFile.println(String.format("<p>%s- bad url!</p>", badUrl));
+        }
+        summaryFile.close();
+        s3.putObjectAsFile(new File("\\summaryFile.txt"), "summaryFile", "localappoutput");
+        sqs.sendMessage("task_completed", managerToLocalAppQ);
+        break;
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-      for (String goodUrl : goodUrls) {
-        bw.write(String.format("<a href = %s></a>", goodUrl));
-        bw.newLine();
-      }
-      s3.putObjectAsFile(summaryFile, "summaryFile", "localappoutput");
-      sqs.sendMessage("task_completed", managerToLocalAppQ);
     }
+
   }
 
   public static void main(String[] args) throws IOException {
@@ -109,6 +113,7 @@ public class Manager {
     do {
       messages = sqs.receiveMessages(localAppToManagerQ, 1);
     } while (messages.isEmpty());
+    sqs.sendMessage("1", managerToLocalAppQ);
     String initMessage = messages.get(0).body();
     String[] splitted = initMessage.split("\t");
     String inputBucketName = splitted[0];
@@ -120,6 +125,7 @@ public class Manager {
       numOfWorkers = 15;
     }
     createWorkers(numOfWorkers);
+    sqs.sendMessage("2", managerToLocalAppQ);
     handleLocalAppMessage(inputFile);
 
   }

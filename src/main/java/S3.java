@@ -32,7 +32,7 @@ public class S3 {
   }
 
 
-  public  void putObject(String filePath, String bucketKey, String bucketName) {
+  public void putObject(String filePath, String bucketKey, String bucketName) {
     s3Client.putObject(
       PutObjectRequest.builder()
         .bucket(bucketName)

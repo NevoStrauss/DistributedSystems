@@ -36,8 +36,18 @@
 <h4>Prerequisites:</h4>
 <ul>
 <li>Java 8, install with:</li>
-<p>On Linux/Mac: <code> sudo apt install java-1.8.0-openjdk</code>
+<p>On Linux/Mac: <code> sudo apt install java-1.8.0-openjdk</code></p>
 <p>On Windows: follow installation here <a href="https://openjdk.java.net/install/">jdk8 for windows</a></p>
+</ul>
+<h4>For testing::</h4>
+<ul>
+<li>Create S3 bucket for jar files, and upload Manager and Worker jar files</li>
+<li>Create 3 queues for:</li>
+<ol>
+<li>Local app to manager</li>
+<li>Manager to Workers</li>
+<li>Workers to Manager</li>
+</ol>
 </ul>
 </div>
 

@@ -23,7 +23,7 @@ public class Worker {
     try {
       String pathToConvertedFile = PdfConverter.handleInput(msgAsString);
       String msgId = msg.body().split("\t")[2];
-      s3.putObject(pathToConvertedFile, UUID.randomUUID().toString(),outputBucket);
+      s3.putObject(pathToConvertedFile, msgId,outputBucket);
       sqs.sendMessage( msgId +"\t" + pathToConvertedFile, workersToManagerQ);
     }
     catch (Exception ex) {
